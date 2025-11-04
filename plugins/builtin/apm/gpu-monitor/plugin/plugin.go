@@ -77,9 +77,114 @@ func NewGPUMonitorPlugin(log hclog.Logger) apm.APM {
 		vramThreshold:   4096, // Default 4GB
 		useGPUProcesses: true,  // Default to GPU process monitoring
 		gpuMemThreshold: 1024,  // Default 1GB threshold
-		whitelistedProcs: []string{
-			"python", "python3", "comfyui", "stable-diffusion", "ollama",
-		},
+		whitelistedProcs: getDefaultWhitelist(),
+	}
+}
+
+// getDefaultWhitelist returns the default list of whitelisted AI processes
+// This covers most common AI/ML applications so the plugin works out-of-the-box
+func getDefaultWhitelist() []string {
+	return []string{
+		// Python interpreters (most AI apps)
+		"python",
+		"python3",
+		"python3.9",
+		"python3.10",
+		"python3.11",
+		"python3.12",
+		"python3.13",
+
+		// ComfyUI
+		"comfyui",
+		"comfyui-wrapper",
+		"comfyui.exe",
+
+		// Stable Diffusion WebUI (AUTOMATIC1111)
+		"stable-diffusion",
+		"stable-diffusion-webui",
+		"webui",
+		"sd-webui",
+		"webui-user",
+		"launch",
+
+		// InvokeAI
+		"invokeai",
+		"invoke-ai",
+		"invokeai-web",
+
+		// Ollama
+		"ollama",
+		"ollama-server",
+		"ollama_llama_server",
+
+		// LLaMA.cpp
+		"llama",
+		"llama.cpp",
+		"llama-cpp",
+		"llama-server",
+		"llama-cli",
+		"main",
+
+		// KoboldCpp
+		"koboldcpp",
+		"koboldai",
+		"kobold",
+
+		// Text Generation WebUI (oobabooga)
+		"text-generation-webui",
+		"ooba",
+		"oobabooga",
+		"server.py",
+
+		// LocalAI
+		"localai",
+		"local-ai",
+
+		// Fooocus
+		"fooocus",
+		"fooocus.exe",
+
+		// vLLM
+		"vllm",
+		"vllm-server",
+
+		// TGI (Text Generation Inference)
+		"text-generation-inference",
+		"tgi",
+
+		// Jupyter / JupyterLab
+		"jupyter",
+		"jupyter-lab",
+		"jupyter-notebook",
+
+		// PyTorch / TensorFlow inference servers
+		"torchserve",
+		"tensorflow_model_server",
+		"tritonserver",
+
+		// Ray Serve
+		"ray",
+		"ray::serve",
+
+		// FastAPI (common for AI APIs)
+		"uvicorn",
+		"gunicorn",
+
+		// Node.js AI apps
+		"node",
+		"nodejs",
+
+		// Common ML frameworks
+		"transformers",
+		"diffusers",
+
+		// Conda environments
+		"conda",
+
+		// Docker containers running AI (match common names)
+		"pytorch",
+		"tensorflow",
+		"nvidia-smi",
 	}
 }
 

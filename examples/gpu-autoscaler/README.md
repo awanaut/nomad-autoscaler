@@ -51,7 +51,24 @@ This will create a `nomad-autoscaler` binary with the GPU plugins included.
 
 ### 2. Configure the Autoscaler
 
-Create an autoscaler configuration file `autoscaler.hcl`:
+#### Quick Start (Minimal Configuration)
+
+The plugin works great with defaults! Minimal config:
+
+```hcl
+apm "gpu-monitor" {
+  driver = "gpu-monitor"
+  config = {
+    use_gpu_processes = "true"  # That's it!
+  }
+}
+```
+
+This automatically whitelists 70+ common AI applications and will detect games on any launcher.
+
+#### Full Configuration
+
+For advanced usage, create `autoscaler.hcl`:
 
 ```hcl
 nomad {
@@ -158,12 +175,29 @@ scaling "comfyui-gpu-manager" {
 **Config Options:**
 
 - `use_gpu_processes` (bool, default: true): **RECOMMENDED** - Monitor actual GPU process list (most accurate)
-- `whitelisted_gpu_processes` (string, comma-separated, default: "python,python3,comfyui,stable-diffusion,ollama"): AI processes to ignore (inline config)
-- `whitelist_file` (string): **RECOMMENDED** - Path to file containing whitelisted processes (one per line, supports comments)
+- `whitelisted_gpu_processes` (string, comma-separated): AI processes to ignore (inline config, adds to defaults)
+- `whitelist_file` (string): Path to file containing additional whitelisted processes (one per line, supports comments)
 - `gpu_process_memory_threshold_mb` (int, default: 1024): Minimum VRAM usage to consider a process as GPU-intensive
 - `monitor_steam` (bool, default: true): Enable Steam process tree monitoring (fallback method)
 - `game_processes` (string, comma-separated): Additional game processes to monitor by name (e.g., "game.exe,RocketLeague.exe")
 - `vram_threshold_mb` (int, default: 4096): VRAM threshold in MB
+
+**Built-in Defaults (Works Out-of-the-Box!):**
+
+The plugin includes a comprehensive default whitelist covering 70+ common AI processes:
+- Python interpreters (all versions)
+- ComfyUI, Stable Diffusion WebUI, InvokeAI, Fooocus
+- Ollama, LLaMA.cpp, KoboldCpp
+- vLLM, Text Generation WebUI (oobabooga)
+- LocalAI, TGI (Text Generation Inference)
+- Jupyter, PyTorch, TensorFlow inference servers
+- FastAPI (uvicorn, gunicorn)
+- And many more...
+
+**You only need to configure whitelist_file or whitelisted_gpu_processes if:**
+- You have custom/uncommon AI applications
+- You want to override the defaults
+- You need to add proprietary tools
 
 **Whitelist File Format:**
 ```

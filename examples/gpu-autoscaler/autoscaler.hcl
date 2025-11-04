@@ -31,16 +31,23 @@ apm "gpu-monitor" {
     # Monitors which processes are actually using the GPU via nvidia-smi
     use_gpu_processes = "true"
 
-    # Option 1: Whitelist File (RECOMMENDED - Easier to maintain)
-    # Path to file containing whitelisted AI processes
-    # See gpu-whitelist.txt for example format
-    whitelist_file = "./examples/gpu-autoscaler/gpu-whitelist.txt"
+    # ============================================================
+    # WHITELIST CONFIGURATION (Optional - Great defaults included!)
+    # ============================================================
+    # The plugin includes 70+ common AI apps by default:
+    # - Python, ComfyUI, Stable Diffusion, Ollama, LLaMA.cpp
+    # - Jupyter, PyTorch, TensorFlow, vLLM, and many more
+    #
+    # Only configure if you have custom/uncommon AI applications
+    # ============================================================
 
-    # Option 2: Inline Whitelist (Alternative - comma-separated)
-    # Uncomment if not using whitelist_file
-    # whitelisted_gpu_processes = "python,python3,comfyui,stable-diffusion,ollama"
+    # Option 1: Whitelist File (Best for multiple custom apps)
+    # Uncomment to add custom apps from a file
+    # whitelist_file = "/etc/nomad-autoscaler/gpu-whitelist.txt"
 
-    # Note: Both options can be used together - they will be merged
+    # Option 2: Inline Whitelist (Best for one or two custom apps)
+    # Uncomment to add custom apps inline (merges with defaults)
+    # whitelisted_gpu_processes = "my-custom-ai-app,another-tool"
 
     # Minimum VRAM usage (MB) to consider a process as GPU-intensive
     # Processes using less than this are ignored
