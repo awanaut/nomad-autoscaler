@@ -4,7 +4,9 @@
 package plugin
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -29,6 +31,7 @@ const (
 	configKeyQueryMode          = "query_mode"
 	configKeyUseGPUProcesses    = "use_gpu_processes"
 	configKeyWhitelistedProcs   = "whitelisted_gpu_processes"
+	configKeyWhitelistFile      = "whitelist_file"
 	configKeyGPUMemThreshold    = "gpu_process_memory_threshold_mb"
 )
 
@@ -119,11 +122,23 @@ func (a *APMPlugin) SetConfig(config map[string]string) error {
 		a.useGPUProcesses = useGPU
 	}
 
-	// Parse whitelisted GPU processes
+	// Parse whitelisted GPU processes from inline config
 	if val, ok := config[configKeyWhitelistedProcs]; ok && val != "" {
 		a.whitelistedProcs = strings.Split(val, ",")
 		for i := range a.whitelistedProcs {
 			a.whitelistedProcs[i] = strings.TrimSpace(a.whitelistedProcs[i])
+		}
+	}
+
+	// Load whitelist from file if specified (merges with inline config)
+	if val, ok := config[configKeyWhitelistFile]; ok && val != "" {
+		fileProcs, err := loadWhitelistFile(val)
+		if err != nil {
+			a.logger.Warn("failed to load whitelist file, using defaults", "file", val, "error", err)
+		} else {
+			// Merge with existing whitelist (deduplicate)
+			a.whitelistedProcs = mergeWhitelists(a.whitelistedProcs, fileProcs)
+			a.logger.Info("loaded whitelist from file", "file", val, "count", len(fileProcs))
 		}
 	}
 
@@ -447,4 +462,69 @@ func (a *APMPlugin) queryGPUUtilization() (float64, error) {
 	}
 
 	return util, nil
+}
+
+// loadWhitelistFile loads whitelisted process names from a file
+// File format: one process name per line, # for comments, blank lines ignored
+func loadWhitelistFile(filePath string) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open whitelist file: %w", err)
+	}
+	defer file.Close()
+
+	var processes []string
+	scanner := bufio.NewScanner(file)
+	lineNum := 0
+
+	for scanner.Scan() {
+		lineNum++
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Support inline comments
+		if idx := strings.Index(line, "#"); idx >= 0 {
+			line = strings.TrimSpace(line[:idx])
+		}
+
+		if line != "" {
+			processes = append(processes, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading whitelist file: %w", err)
+	}
+
+	return processes, nil
+}
+
+// mergeWhitelists merges two whitelist slices and removes duplicates
+func mergeWhitelists(list1, list2 []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+
+	// Add from first list
+	for _, proc := range list1 {
+		procLower := strings.ToLower(strings.TrimSpace(proc))
+		if procLower != "" && !seen[procLower] {
+			seen[procLower] = true
+			result = append(result, proc)
+		}
+	}
+
+	// Add from second list (deduplicate)
+	for _, proc := range list2 {
+		procLower := strings.ToLower(strings.TrimSpace(proc))
+		if procLower != "" && !seen[procLower] {
+			seen[procLower] = true
+			result = append(result, proc)
+		}
+	}
+
+	return result
 }

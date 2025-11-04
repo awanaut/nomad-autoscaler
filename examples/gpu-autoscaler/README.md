@@ -68,8 +68,15 @@ apm "gpu-monitor" {
   driver = "gpu-monitor"
 
   config = {
+    # GPU Process Monitoring (Recommended)
+    use_gpu_processes = "true"
+
+    # Whitelist file for AI processes
+    whitelist_file = "/etc/nomad-autoscaler/gpu-whitelist.txt"
+
+    # Fallback monitoring
     monitor_steam      = "true"
-    game_processes     = "steam,game.exe"  # Additional processes to monitor
+    game_processes     = ""  # Additional processes to monitor
     vram_threshold_mb  = "4096"
   }
 }
@@ -151,11 +158,25 @@ scaling "comfyui-gpu-manager" {
 **Config Options:**
 
 - `use_gpu_processes` (bool, default: true): **RECOMMENDED** - Monitor actual GPU process list (most accurate)
-- `whitelisted_gpu_processes` (string, comma-separated, default: "python,python3,comfyui,stable-diffusion,ollama"): AI processes to ignore
+- `whitelisted_gpu_processes` (string, comma-separated, default: "python,python3,comfyui,stable-diffusion,ollama"): AI processes to ignore (inline config)
+- `whitelist_file` (string): **RECOMMENDED** - Path to file containing whitelisted processes (one per line, supports comments)
 - `gpu_process_memory_threshold_mb` (int, default: 1024): Minimum VRAM usage to consider a process as GPU-intensive
 - `monitor_steam` (bool, default: true): Enable Steam process tree monitoring (fallback method)
 - `game_processes` (string, comma-separated): Additional game processes to monitor by name (e.g., "game.exe,RocketLeague.exe")
 - `vram_threshold_mb` (int, default: 4096): VRAM threshold in MB
+
+**Whitelist File Format:**
+```
+# Lines starting with # are comments
+python
+python3
+comfyui        # ComfyUI application
+stable-diffusion
+ollama
+
+# Add your AI apps here
+my-custom-app
+```
 
 **Detection Methods (Priority Order):**
 

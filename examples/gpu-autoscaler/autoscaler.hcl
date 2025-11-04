@@ -31,9 +31,16 @@ apm "gpu-monitor" {
     # Monitors which processes are actually using the GPU via nvidia-smi
     use_gpu_processes = "true"
 
-    # Whitelist your AI applications (comma-separated)
-    # Any GPU process NOT in this list is considered a game
-    whitelisted_gpu_processes = "python,python3,comfyui,stable-diffusion,ollama"
+    # Option 1: Whitelist File (RECOMMENDED - Easier to maintain)
+    # Path to file containing whitelisted AI processes
+    # See gpu-whitelist.txt for example format
+    whitelist_file = "./examples/gpu-autoscaler/gpu-whitelist.txt"
+
+    # Option 2: Inline Whitelist (Alternative - comma-separated)
+    # Uncomment if not using whitelist_file
+    # whitelisted_gpu_processes = "python,python3,comfyui,stable-diffusion,ollama"
+
+    # Note: Both options can be used together - they will be merged
 
     # Minimum VRAM usage (MB) to consider a process as GPU-intensive
     # Processes using less than this are ignored

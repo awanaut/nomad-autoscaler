@@ -1,0 +1,56 @@
+# GPU Process Whitelist
+# This file contains process names that should be ignored by game detection
+# One process name per line. Lines starting with # are comments.
+#
+# How it works:
+# - Any GPU process NOT in this list is considered a game
+# - Process names are matched case-insensitively
+# - Partial matches work (e.g., "python" matches "python3.11")
+#
+# Common AI/ML Applications:
+
+# Python-based AI apps
+python
+python3
+python3.11
+python3.12
+
+# ComfyUI
+comfyui
+comfyui-wrapper
+
+# Stable Diffusion WebUI
+stable-diffusion
+webui
+sd-webui
+
+# InvokeAI
+invokeai
+invoke-ai
+
+# Ollama
+ollama
+ollama-server
+
+# LLaMA.cpp
+llama
+llama.cpp
+llama-cpp
+
+# KoboldCpp
+koboldcpp
+koboldai
+
+# Text Generation WebUI (oobabooga)
+text-generation-webui
+ooba
+
+# LocalAI
+localai
+
+# Fooocus
+fooocus
+
+# Add your custom AI applications below:
+# my-custom-app
+# another-ai-tool
