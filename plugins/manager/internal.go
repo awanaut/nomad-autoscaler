@@ -10,12 +10,15 @@ import (
 	"github.com/hashicorp/nomad-autoscaler/agent/config"
 	"github.com/hashicorp/nomad-autoscaler/plugins"
 	datadog "github.com/hashicorp/nomad-autoscaler/plugins/builtin/apm/datadog/plugin"
+	gpumonitor "github.com/hashicorp/nomad-autoscaler/plugins/builtin/apm/gpu-monitor/plugin"
 	nomadAPM "github.com/hashicorp/nomad-autoscaler/plugins/builtin/apm/nomad/plugin"
 	prometheus "github.com/hashicorp/nomad-autoscaler/plugins/builtin/apm/prometheus/plugin"
 	fixedValue "github.com/hashicorp/nomad-autoscaler/plugins/builtin/strategy/fixed-value/plugin"
 	passthrough "github.com/hashicorp/nomad-autoscaler/plugins/builtin/strategy/pass-through/plugin"
+	resourceaware "github.com/hashicorp/nomad-autoscaler/plugins/builtin/strategy/resource-aware/plugin"
 	targetValue "github.com/hashicorp/nomad-autoscaler/plugins/builtin/strategy/target-value/plugin"
 	threshold "github.com/hashicorp/nomad-autoscaler/plugins/builtin/strategy/threshold/plugin"
+	aimodelmanager "github.com/hashicorp/nomad-autoscaler/plugins/builtin/target/ai-model-manager/plugin"
 	awsASG "github.com/hashicorp/nomad-autoscaler/plugins/builtin/target/aws-asg/plugin"
 	azureVMSS "github.com/hashicorp/nomad-autoscaler/plugins/builtin/target/azure-vmss/plugin"
 	gceMIG "github.com/hashicorp/nomad-autoscaler/plugins/builtin/target/gce-mig/plugin"
@@ -66,6 +69,15 @@ func (pm *PluginManager) loadInternalPlugin(cfg *config.Plugin, pluginType strin
 	case plugins.InternalTargetIBMIG:
 		info.factory = ibmcloudIG.PluginConfig.Factory
 		info.driver = "ibmcloud-ig"
+	case plugins.InternalAPMGPUMonitor:
+		info.factory = gpumonitor.PluginConfig.Factory
+		info.driver = "gpu-monitor"
+	case plugins.InternalStrategyResourceAware:
+		info.factory = resourceaware.PluginConfig.Factory
+		info.driver = "resource-aware"
+	case plugins.InternalTargetAIModelManager:
+		info.factory = aimodelmanager.PluginConfig.Factory
+		info.driver = "ai-model-manager"
 	default:
 		pm.logger.Error("unsupported internal plugin", "plugin", cfg.Driver)
 		return

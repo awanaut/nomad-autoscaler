@@ -57,6 +57,15 @@ const (
 	// InternalTargetIBMIG is the IBMCloud Instance Group target
 	// plugin.
 	InternalTargetIBMIG = "ibmcloud-ig"
+
+	// InternalAPMGPUMonitor is the GPU Monitor APM internal plugin name.
+	InternalAPMGPUMonitor = "gpu-monitor"
+
+	// InternalStrategyResourceAware is the Resource-Aware Strategy internal plugin name.
+	InternalStrategyResourceAware = "resource-aware"
+
+	// InternalTargetAIModelManager is the AI Model Manager target plugin.
+	InternalTargetAIModelManager = "ai-model-manager"
 )
 
 // ConfigKeyNomadConfigInherit is a generic plugin config map key that supports
