@@ -22,19 +22,32 @@ policy {
 }
 
 # GPU Monitor APM Plugin
-# Monitors Steam processes and GPU resource usage
+# Monitors GPU processes and Steam activity
 apm "gpu-monitor" {
   driver = "gpu-monitor"
 
   config = {
-    # Enable Steam process monitoring
+    # GPU Process Monitoring (RECOMMENDED - Most Accurate)
+    # Monitors which processes are actually using the GPU via nvidia-smi
+    use_gpu_processes = "true"
+
+    # Whitelist your AI applications (comma-separated)
+    # Any GPU process NOT in this list is considered a game
+    whitelisted_gpu_processes = "python,python3,comfyui,stable-diffusion,ollama"
+
+    # Minimum VRAM usage (MB) to consider a process as GPU-intensive
+    # Processes using less than this are ignored
+    gpu_process_memory_threshold_mb = "1024"
+
+    # Steam Process Tree Monitoring (Fallback)
+    # Monitors Steam child processes as a heuristic
     monitor_steam = "true"
 
-    # Additional game processes to monitor (comma-separated)
-    # Add specific game executables here if needed
+    # Specific Game Process Names (Optional)
+    # Add specific game executables here if GPU process monitoring isn't enough
     game_processes = ""
 
-    # VRAM threshold in MB
+    # VRAM threshold in MB (for VRAM queries)
     vram_threshold_mb = "4096"
   }
 }

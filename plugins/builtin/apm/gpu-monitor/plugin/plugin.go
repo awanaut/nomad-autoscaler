@@ -23,10 +23,13 @@ const (
 	pluginName = "gpu-monitor"
 
 	// Configuration keys
-	configKeyMonitorSteam   = "monitor_steam"
-	configKeyGameProcesses  = "game_processes"
-	configKeyVRAMThreshold  = "vram_threshold_mb"
-	configKeyQueryMode      = "query_mode"
+	configKeyMonitorSteam       = "monitor_steam"
+	configKeyGameProcesses      = "game_processes"
+	configKeyVRAMThreshold      = "vram_threshold_mb"
+	configKeyQueryMode          = "query_mode"
+	configKeyUseGPUProcesses    = "use_gpu_processes"
+	configKeyWhitelistedProcs   = "whitelisted_gpu_processes"
+	configKeyGPUMemThreshold    = "gpu_process_memory_threshold_mb"
 )
 
 var (
@@ -51,9 +54,12 @@ type APMPlugin struct {
 	config map[string]string
 
 	// Configuration
-	monitorSteam   bool
-	gameProcesses  []string
-	vramThreshold  int64
+	monitorSteam        bool
+	gameProcesses       []string
+	vramThreshold       int64
+	useGPUProcesses     bool
+	whitelistedProcs    []string
+	gpuMemThreshold     int64
 
 	// Steam process tracking
 	steamPID       int32
@@ -63,9 +69,14 @@ type APMPlugin struct {
 // NewGPUMonitorPlugin returns a new instance of the GPU Monitor APM plugin
 func NewGPUMonitorPlugin(log hclog.Logger) apm.APM {
 	return &APMPlugin{
-		logger:        log,
-		monitorSteam:  true,
-		vramThreshold: 4096, // Default 4GB
+		logger:          log,
+		monitorSteam:    true,
+		vramThreshold:   4096, // Default 4GB
+		useGPUProcesses: true,  // Default to GPU process monitoring
+		gpuMemThreshold: 1024,  // Default 1GB threshold
+		whitelistedProcs: []string{
+			"python", "python3", "comfyui", "stable-diffusion", "ollama",
+		},
 	}
 }
 
@@ -99,9 +110,38 @@ func (a *APMPlugin) SetConfig(config map[string]string) error {
 		a.vramThreshold = threshold
 	}
 
+	// Parse use_gpu_processes config
+	if val, ok := config[configKeyUseGPUProcesses]; ok {
+		useGPU, err := strconv.ParseBool(val)
+		if err != nil {
+			return fmt.Errorf("invalid value for %q: %v", configKeyUseGPUProcesses, val)
+		}
+		a.useGPUProcesses = useGPU
+	}
+
+	// Parse whitelisted GPU processes
+	if val, ok := config[configKeyWhitelistedProcs]; ok && val != "" {
+		a.whitelistedProcs = strings.Split(val, ",")
+		for i := range a.whitelistedProcs {
+			a.whitelistedProcs[i] = strings.TrimSpace(a.whitelistedProcs[i])
+		}
+	}
+
+	// Parse GPU memory threshold
+	if val, ok := config[configKeyGPUMemThreshold]; ok {
+		threshold, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid value for %q: %v", configKeyGPUMemThreshold, val)
+		}
+		a.gpuMemThreshold = threshold
+	}
+
 	a.logger.Info("GPU Monitor APM configured",
 		"monitor_steam", a.monitorSteam,
+		"use_gpu_processes", a.useGPUProcesses,
+		"gpu_mem_threshold_mb", a.gpuMemThreshold,
 		"game_processes", a.gameProcesses,
+		"whitelisted_procs", a.whitelistedProcs,
 		"vram_threshold_mb", a.vramThreshold)
 
 	return nil
@@ -192,19 +232,90 @@ func (a *APMPlugin) QueryMultiple(q string, r sdk.TimeRange) ([]sdk.TimestampedM
 // checkGameRunning checks if any game processes are running
 // Returns 1.0 if game detected, 0.0 otherwise
 func (a *APMPlugin) checkGameRunning() float64 {
-	if a.monitorSteam {
-		if a.checkSteamGames() {
+	// Priority 1: Check GPU processes (most accurate)
+	if a.useGPUProcesses {
+		if a.checkGPUProcesses() {
 			return 1.0
 		}
 	}
 
+	// Priority 2: Check specific process names
 	if len(a.gameProcesses) > 0 {
 		if a.checkSpecificProcesses() {
 			return 1.0
 		}
 	}
 
+	// Priority 3: Steam process count heuristic (fallback)
+	if a.monitorSteam {
+		if a.checkSteamGames() {
+			return 1.0
+		}
+	}
+
 	return 0.0
+}
+
+// checkGPUProcesses checks if any non-whitelisted processes are using the GPU
+// This is the most accurate method for game detection
+func (a *APMPlugin) checkGPUProcesses() bool {
+	cmd := exec.Command("nvidia-smi",
+		"--query-compute-apps=pid,process_name,used_memory",
+		"--format=csv,noheader,nounits")
+
+	output, err := cmd.Output()
+	if err != nil {
+		a.logger.Debug("failed to query GPU processes", "error", err)
+		return false
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Parse CSV: pid, process_name, used_memory
+		parts := strings.Split(line, ", ")
+		if len(parts) < 3 {
+			continue
+		}
+
+		processName := strings.TrimSpace(parts[1])
+		usedMemStr := strings.TrimSpace(parts[2])
+
+		// Parse memory usage
+		usedMem, err := strconv.ParseInt(usedMemStr, 10, 64)
+		if err != nil {
+			a.logger.Debug("failed to parse GPU memory", "value", usedMemStr)
+			continue
+		}
+
+		// Check if this process exceeds threshold
+		if usedMem < a.gpuMemThreshold {
+			continue
+		}
+
+		// Check if process is whitelisted (AI apps)
+		isWhitelisted := false
+		processLower := strings.ToLower(processName)
+		for _, whitelisted := range a.whitelistedProcs {
+			if strings.Contains(processLower, strings.ToLower(whitelisted)) {
+				isWhitelisted = true
+				break
+			}
+		}
+
+		if !isWhitelisted {
+			a.logger.Info("non-whitelisted GPU process detected",
+				"process", processName,
+				"vram_mb", usedMem)
+			return true
+		}
+	}
+
+	return false
 }
 
 // checkSteamGames checks if Steam is running games

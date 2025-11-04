@@ -150,9 +150,28 @@ scaling "comfyui-gpu-manager" {
 
 **Config Options:**
 
-- `monitor_steam` (bool, default: true): Enable Steam process monitoring
-- `game_processes` (string, comma-separated): Additional game processes to monitor (e.g., "game.exe,RocketLeague.exe")
+- `use_gpu_processes` (bool, default: true): **RECOMMENDED** - Monitor actual GPU process list (most accurate)
+- `whitelisted_gpu_processes` (string, comma-separated, default: "python,python3,comfyui,stable-diffusion,ollama"): AI processes to ignore
+- `gpu_process_memory_threshold_mb` (int, default: 1024): Minimum VRAM usage to consider a process as GPU-intensive
+- `monitor_steam` (bool, default: true): Enable Steam process tree monitoring (fallback method)
+- `game_processes` (string, comma-separated): Additional game processes to monitor by name (e.g., "game.exe,RocketLeague.exe")
 - `vram_threshold_mb` (int, default: 4096): VRAM threshold in MB
+
+**Detection Methods (Priority Order):**
+
+1. **GPU Process Monitoring** (Primary - Most Accurate):
+   - Queries `nvidia-smi --query-compute-apps` to see which processes are actively using the GPU
+   - Any non-whitelisted process using >1GB VRAM → Game detected
+   - Works with ANY game launcher (Steam, Epic, GOG, standalone)
+   - No false positives from background tasks
+
+2. **Specific Process Names** (Secondary):
+   - Scans all running processes for configured game names
+   - Accurate but requires manual configuration per game
+
+3. **Steam Process Tree** (Fallback):
+   - Counts Steam child processes (heuristic: >5 processes = game running)
+   - Simple but less accurate (false positives possible)
 
 **Query Modes:**
 
